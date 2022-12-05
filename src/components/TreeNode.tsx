@@ -6,7 +6,7 @@ import { ChevronDown, ChevronRight } from "tabler-icons-react";
 interface TreeNodeProps {
   value: string;
   label: string;
-  checked: 1 | 2 | 0;
+  checked: "checked" | "unchecked" | "indeterminate";
   expanded: boolean;
   onExpand: any;
   onCheck: any;
@@ -46,9 +46,9 @@ const TreeNode: FC<TreeNodeProps> = ({
   }, [expanded, onExpand, isParent]);
 
   const getCheckState = useCallback(() => {
-    if (checked === 0) {
+    if (checked === "unchecked") {
       return true;
-    } else if (checked === 1) {
+    } else if (checked === "checked") {
       return false;
     } else {
       return true;
@@ -67,8 +67,8 @@ const TreeNode: FC<TreeNodeProps> = ({
         }}
       >
         <Checkbox
-          checked={checked === 1}
-          indeterminate={checked === 2}
+          checked={checked === "checked"}
+          indeterminate={checked === "indeterminate"}
           onChange={handleCheck}
         />
         {label}

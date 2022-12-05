@@ -99,35 +99,20 @@ class NodeModal {
     return list;
   }
 
-  // normalize() {
-  //   // remove duplicate child value
-  //   const nodesToCheck = this.rootNodeValues.map((rootValue) =>
-  //     this.getNode(rootValue)
-  //   );
+  getCheckedLeafNodes() {
+    const checkedLeafNodes: FlatNode[] = [];
 
-  //   const list: string[] = [];
+    Object.keys(this.flatNodes).forEach((value) => {
+      const node = this.flatNodes[value];
+      if (node.checked && node.isLeaf) {
+        checkedLeafNodes.push(node);
+      }
+    });
 
-  //   while (nodesToCheck.length !== 0) {
-  //     const nodeToCheck = nodesToCheck.shift()!;
+    return checkedLeafNodes;
+  }
 
-  //     if (nodeToCheck.checkState === 1) {
-  //       list.push(nodeToCheck.value);
-  //     }
-  //     if (nodeToCheck.checkState === 2) {
-  //       nodeToCheck.children!.forEach((child) => {
-  //         nodesToCheck.push(this.getNode(child.value));
-  //       });
-  //     }
-  //   }
-
-  //   console.log(list, "normalized list");
-  // }
-
-  toggleCheck(
-    node: Node | FlatNode,
-    isChecked: boolean,
-    percolateUpward = true
-  ) {
+  toggleCheck(node: Node | FlatNode, isChecked: boolean) {
     const flatNode = this.getNode(node.value);
     this.toggleNode(node.value, NODE_STATUS.CHECKED, isChecked);
 
@@ -136,28 +121,13 @@ class NodeModal {
     }
 
     this.cascadeDown(flatNode, isChecked);
-    percolateUpward && this.cascadeUp(flatNode);
   }
 
   cascadeDown(flatNode: FlatNode, isChecked: boolean) {
     if (flatNode.isParent) {
       flatNode.children!.forEach((child) => {
-        this.toggleCheck(child, isChecked, false);
+        this.toggleCheck(child, isChecked);
       });
-    }
-  }
-
-  cascadeUp(flatNode: FlatNode) {
-    if (flatNode.isChild) {
-      const parent = this.getNode(flatNode.value).parent;
-
-      this.toggleNode(
-        parent.value,
-        NODE_STATUS.CHECKED,
-        this.isEveryChildChecked(parent)
-      );
-
-      this.cascadeUp(this.getNode(parent.value));
     }
   }
 

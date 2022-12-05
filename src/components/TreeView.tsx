@@ -1,16 +1,8 @@
-import React, {
-  FC,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { FC, useCallback, useEffect, useRef, useState } from "react";
 import NodeModel, { NODE_STATUS } from "./NodeModal";
 import TreeNode from "./TreeNode";
 import { isEqual } from "lodash-es";
-import { FlatNode, Node } from "./typings";
-import { useUpdateEffect } from "react-use";
+import { Node } from "./typings";
 
 interface TreeViewProps {
   checked: string[];
@@ -20,12 +12,7 @@ interface TreeViewProps {
   onExpand: (list: string[]) => void;
 }
 
-const getInitModel = (
-  nodes: Node[],
-  checked: string[],
-  expanded: string[],
-  onCheck: any
-) => {
+const getInitModel = (nodes: Node[], checked: string[], expanded: string[]) => {
   const model = new NodeModel({});
   model.flattenNodes(nodes);
   model.deserializeLists(
@@ -35,7 +22,6 @@ const getInitModel = (
     },
     true
   );
-  // onCheck(model.serializeList("checked"));
   return model;
 };
 
@@ -47,7 +33,7 @@ const TreeView: FC<TreeViewProps> = ({
   onExpand,
 }) => {
   const [model, _] = useState<NodeModel>(() =>
-    getInitModel(nodes, checked, expanded, onCheck)
+    getInitModel(nodes, checked, expanded)
   );
 
   useEffect(() => {
@@ -60,13 +46,13 @@ const TreeView: FC<TreeViewProps> = ({
 
   const isEveryChildChecked = (node: Node) => {
     return node.children!.every(
-      (child) => model.getNode(child.value).checkState === 1
+      (child) => model.getNode(child.value).checkState === "checked"
     );
   };
 
   const isSomeChildChecked = (node: Node) => {
     return node.children!.some(
-      (child) => model.getNode(child.value).checkState! > 0
+      (child) => model.getNode(child.value).checkState! !== "unchecked"
     );
   };
 
@@ -74,32 +60,16 @@ const TreeView: FC<TreeViewProps> = ({
     const flatNode = model.getNode(node.value);
 
     if (flatNode.isLeaf) {
-      return flatNode.checked ? 1 : 0;
+      return flatNode.checked ? "checked" : "unchecked";
     }
     if (isEveryChildChecked(node)) {
-      return 1;
+      return "checked";
     }
     if (isSomeChildChecked(node)) {
-      return 2;
+      return "indeterminate";
     }
-    return 0;
+    return "unchecked";
   };
-
-  // const calcCheckState = (nodes: Node[]) => {
-  //   nodes.forEach((node) => {
-  //     const flatNode = model.getNode(node.value);
-  //     flatNode.isParent && calcCheckState(flatNode.children!);
-
-  //     flatNode.checkState = determineShallowCheckState(node);
-  //   });
-  // };
-
-  // getDerivedStateFromProps
-  // if (!isEqual(nodes, nodesRef.current)) {
-  //   model.reset();
-  //   model.flattenNodes(nodes);
-  //   nodesRef.current = nodes;
-  // }
 
   if (
     !isEqual(checked, checkedRef.current) ||
@@ -109,8 +79,7 @@ const TreeView: FC<TreeViewProps> = ({
       checked,
       expanded,
     });
-    // calcCheckState(nodes);
-    // model.normalize();
+    console.log(model.getCheckedLeafNodes());
     expandedRef.current = expanded;
     checkedRef.current = checked;
   }
