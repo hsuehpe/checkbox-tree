@@ -6,13 +6,10 @@ export enum NODE_STATUS {
 }
 
 class TreeSelect {
-  public props: object;
   private flatNodes: Record<string, FlatNode>;
-  private rootNodeValues: string[] = [];
 
-  constructor(props: object, nodes = {}) {
-    this.props = props;
-    this.flatNodes = nodes;
+  constructor(initialFlatNodes = {}) {
+    this.flatNodes = initialFlatNodes;
   }
 
   private cascadeDown(flatNode: FlatNode, isChecked: boolean) {
@@ -31,10 +28,6 @@ class TreeSelect {
     if (!Array.isArray(nodes) || nodes.length === 0) return;
 
     nodes.forEach((node, index) => {
-      if (depth === 0) {
-        this.rootNodeValues.push(node.value);
-      }
-
       const { value, label, children } = node;
       const isParent = this.nodeHasChildren(node);
       const flatNode = (this.flatNodes[value] = {
@@ -105,20 +98,19 @@ class TreeSelect {
   }
 
   clone() {
-    const clonedNodes: Record<string, FlatNode> = {};
+    const clonedFlatNodes: Record<string, FlatNode> = {};
 
     // Re-construct nodes one level deep to avoid shallow copy of mutable characteristics
     Object.keys(this.flatNodes).forEach((value) => {
       const node = this.flatNodes[value];
-      clonedNodes[value] = { ...node };
+      clonedFlatNodes[value] = { ...node };
     });
 
-    return new TreeSelect(this.props, clonedNodes);
+    return new TreeSelect(clonedFlatNodes);
   }
 
   reset() {
     this.flatNodes = {};
-    this.rootNodeValues = [];
   }
 }
 
