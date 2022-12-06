@@ -1,8 +1,12 @@
 export type Node = {
   value: string;
   label: string;
+  checked?: boolean;
+  expanded?: boolean;
   children?: Node[];
 };
+
+export type CheckState = "checked" | "unchecked" | "indeterminate";
 
 export interface FlatNode {
   label: string;
@@ -17,5 +21,5 @@ export interface FlatNode {
   index: number;
   checked?: boolean;
   expanded?: boolean;
-  checkState?: "checked" | "unchecked" | "indeterminate";
+  checkState?: CheckState;
 }

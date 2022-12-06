@@ -5,14 +5,22 @@ export enum NODE_STATUS {
   EXPANDED = "expanded",
 }
 
-class NodeModal {
+class TreeSelect {
   public props: object;
-  public flatNodes: Record<string, FlatNode>;
+  private flatNodes: Record<string, FlatNode>;
   private rootNodeValues: string[] = [];
 
   constructor(props: object, nodes = {}) {
     this.props = props;
     this.flatNodes = nodes;
+  }
+
+  private cascadeDown(flatNode: FlatNode, isChecked: boolean) {
+    if (flatNode.isParent) {
+      flatNode.children!.forEach((child) => {
+        this.toggleCheck(child, isChecked);
+      });
+    }
   }
 
   getNode(value: string) {
@@ -21,8 +29,6 @@ class NodeModal {
 
   flattenNodes(nodes?: Node[], parent = {} as FlatNode, depth = 0) {
     if (!Array.isArray(nodes) || nodes.length === 0) return;
-
-    // Error handling, duplicated node value
 
     nodes.forEach((node, index) => {
       if (depth === 0) {
@@ -44,59 +50,15 @@ class NodeModal {
           ? `${parent.treePath}/${index}.${value}`
           : `/${index}.${value}`,
         index,
+        checked: parent.checked ? parent.checked : node.checked ?? false,
+        expanded: node.expanded ?? false,
       });
       this.flattenNodes(children, flatNode, depth + 1);
     });
   }
 
-  nodeHasChildren(node: Node) {
+  private nodeHasChildren(node: Node) {
     return Array.isArray(node.children);
-  }
-
-  // Apply outer state to nodes
-  deserializeLists(
-    lists: { checked?: string[]; expanded?: string[] },
-    initial = false
-  ) {
-    const allKeys = Object.keys(this.flatNodes);
-    allKeys.forEach((nodeKey: string) => {
-      this.flatNodes[nodeKey][NODE_STATUS.CHECKED] = false;
-      this.flatNodes[nodeKey][NODE_STATUS.EXPANDED] = false;
-    });
-
-    const checkedLists = lists[NODE_STATUS.CHECKED] || [];
-    const expandedLists = lists[NODE_STATUS.EXPANDED] || [];
-
-    checkedLists.forEach((value) => {
-      if (this.flatNodes[value]) {
-        this.flatNodes[value][NODE_STATUS.CHECKED] = true;
-        if (initial) {
-          this.cascadeDown(this.flatNodes[value], true);
-        }
-      }
-    });
-
-    expandedLists.forEach((value) => {
-      if (this.flatNodes[value]) {
-        this.flatNodes[value][NODE_STATUS.EXPANDED] = true;
-      }
-    });
-  }
-
-  // Extract state from nodes to list
-  serializeList(nodeStatus: NODE_STATUS) {
-    const list: string[] = [];
-
-    const allKeys = Object.keys(this.flatNodes);
-
-    allKeys.forEach((nodeKey: string) => {
-      const node = this.getNode(nodeKey);
-      if (node[nodeStatus]) {
-        list.push(node.value);
-      }
-    });
-
-    return list;
   }
 
   getCheckedLeafNodes() {
@@ -123,12 +85,8 @@ class NodeModal {
     this.cascadeDown(flatNode, isChecked);
   }
 
-  cascadeDown(flatNode: FlatNode, isChecked: boolean) {
-    if (flatNode.isParent) {
-      flatNode.children!.forEach((child) => {
-        this.toggleCheck(child, isChecked);
-      });
-    }
+  toggleNode(nodeValue: string, nodeStatus: NODE_STATUS, toggleValue: boolean) {
+    this.flatNodes[nodeValue][nodeStatus] = toggleValue;
   }
 
   expandAllNodes(expand: boolean) {
@@ -146,10 +104,6 @@ class NodeModal {
     return node.children!.every((child) => this.getNode(child.value).checked);
   }
 
-  toggleNode(nodeValue: string, nodeStatus: NODE_STATUS, toggleValue: boolean) {
-    this.flatNodes[nodeValue][nodeStatus] = toggleValue;
-  }
-
   clone() {
     const clonedNodes: Record<string, FlatNode> = {};
 
@@ -159,7 +113,7 @@ class NodeModal {
       clonedNodes[value] = { ...node };
     });
 
-    return new NodeModal(this.props, clonedNodes);
+    return new TreeSelect(this.props, clonedNodes);
   }
 
   reset() {
@@ -168,4 +122,4 @@ class NodeModal {
   }
 }
 
-export default NodeModal;
+export default TreeSelect;

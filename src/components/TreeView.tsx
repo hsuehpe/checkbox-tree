@@ -1,57 +1,37 @@
 import React, { FC, useCallback, useEffect, useRef, useState } from "react";
-import NodeModel, { NODE_STATUS } from "./NodeModal";
+import TreeSelect, { NODE_STATUS } from "./TreeSelect";
 import TreeNode from "./TreeNode";
-import { Node } from "./typings";
+import { CheckState, Node } from "./typings";
 
 interface TreeViewProps {
-  checked: string[];
-  expanded: string[];
   nodes: Node[];
   onCheck: (list: string[]) => void;
   onExpand: (list: string[]) => void;
 }
 
-const getInitModel = (nodes: Node[], checked: string[], expanded: string[]) => {
-  const model = new NodeModel({});
-  model.flattenNodes(nodes);
-  model.deserializeLists(
-    {
-      checked,
-      expanded,
-    },
-    true
-  );
-  return model;
+const getInitTreeSelect = (nodes: Node[]) => {
+  const treeSelect = new TreeSelect({});
+  treeSelect.flattenNodes(nodes);
+  return treeSelect;
 };
 
-const TreeView: FC<TreeViewProps> = ({
-  checked,
-  expanded,
-  nodes,
-  onCheck,
-  onExpand,
-}) => {
-  const [model, _] = useState<NodeModel>(() =>
-    getInitModel(nodes, checked, expanded)
-  );
-
-  const checkedRef = useRef<string[]>(checked);
-  const expandedRef = useRef<string[]>(expanded);
+const TreeView: FC<TreeViewProps> = ({ nodes, onCheck, onExpand }) => {
+  const [tree, setTree] = useState<TreeSelect>(() => getInitTreeSelect(nodes));
 
   const isEveryChildChecked = (node: Node) => {
     return node.children!.every(
-      (child) => model.getNode(child.value).checkState === "checked"
+      (child) => tree.getNode(child.value).checkState === "checked"
     );
   };
 
   const isSomeChildChecked = (node: Node) => {
     return node.children!.some(
-      (child) => model.getNode(child.value).checkState! !== "unchecked"
+      (child) => tree.getNode(child.value).checkState! !== "unchecked"
     );
   };
 
-  const determineShallowCheckState = (node: Node) => {
-    const flatNode = model.getNode(node.value);
+  const determineShallowCheckState = (node: Node): CheckState => {
+    const flatNode = tree.getNode(node.value);
 
     if (flatNode.isLeaf) {
       return flatNode.checked ? "checked" : "unchecked";
@@ -67,87 +47,63 @@ const TreeView: FC<TreeViewProps> = ({
 
   const handleCheck = useCallback(
     ({ value, checked }: { value: string; checked: boolean }) => {
-      const clonedModel = model.clone();
-      clonedModel.toggleCheck(model.getNode(value), checked);
-
-      const serializedList = clonedModel.serializeList(NODE_STATUS.CHECKED);
-      onCheck(serializedList);
-
-      console.log({
-        type: NODE_STATUS.CHECKED,
-        value: checked,
-        flatNode: {
-          ...clonedModel.getNode(value),
-        },
-      });
+      const clonedTree = tree.clone();
+      clonedTree.toggleCheck(clonedTree.getNode(value), checked);
+      onCheck(clonedTree.getCheckedLeafNodes().map((node) => node.value));
+      setTree(clonedTree);
     },
-    []
+    [tree]
   );
 
   const handleExpand = useCallback(
     ({ value, expanded }: { value: string; expanded: boolean }) => {
-      const clonedModel = model.clone();
-      clonedModel.toggleNode(value, NODE_STATUS.EXPANDED, expanded);
-
-      const serializedList = clonedModel.serializeList(NODE_STATUS.EXPANDED);
-      onExpand(serializedList);
+      const clonedTree = tree.clone();
+      clonedTree.toggleNode(value, NODE_STATUS.EXPANDED, expanded);
+      setTree(clonedTree);
     },
-    []
+    [tree]
   );
 
-  useEffect(() => {
-    onCheck(model.serializeList(NODE_STATUS.CHECKED));
-  }, []);
+  const renderTreeNodes = useCallback(
+    (nodes: Node[]) => {
+      const treeNodes = nodes.map((node) => {
+        const flatNode = tree.getNode(node.value);
+        const { expanded, label, value, parent, isParent, treePath } = flatNode;
 
-  if (
-    JSON.stringify(checked) !== JSON.stringify(checkedRef.current) ||
-    JSON.stringify(expanded) !== JSON.stringify(expandedRef.current)
-  ) {
-    model.deserializeLists({
-      checked,
-      expanded,
-    });
-    expandedRef.current = expanded;
-    checkedRef.current = checked;
-  }
+        const children = flatNode.isParent
+          ? renderTreeNodes(flatNode.children!)
+          : null;
 
-  const renderTreeNodes = (nodes: Node[]) => {
-    const treeNodes = nodes.map((node) => {
-      const flatNode = model.getNode(node.value);
-      const { expanded, label, value, parent, isParent } = flatNode;
+        flatNode.checkState = determineShallowCheckState(node);
 
-      const children = flatNode.isParent
-        ? renderTreeNodes(flatNode.children!)
-        : null;
+        const parentExpanded = parent.value
+          ? tree.getNode(parent.value).expanded
+          : true;
 
-      flatNode.checkState = determineShallowCheckState(node);
+        if (!parentExpanded) return null;
 
-      const parentExpanded = parent.value
-        ? model.getNode(parent.value).expanded
-        : true;
+        return (
+          <ul key={treePath}>
+            <TreeNode
+              key={`${treePath}-${value}`}
+              value={value}
+              label={label}
+              checked={flatNode.checkState}
+              expanded={expanded ?? false}
+              onCheck={handleCheck}
+              onExpand={handleExpand}
+              isParent={isParent}
+            >
+              {children}
+            </TreeNode>
+          </ul>
+        );
+      });
 
-      if (!parentExpanded) return null;
-
-      return (
-        <ul>
-          <TreeNode
-            key={value}
-            value={value}
-            label={label}
-            checked={flatNode.checkState}
-            expanded={expanded ?? false}
-            onCheck={handleCheck}
-            onExpand={handleExpand}
-            isParent={isParent}
-          >
-            {children}
-          </TreeNode>
-        </ul>
-      );
-    });
-
-    return treeNodes;
-  };
+      return treeNodes;
+    },
+    [tree, nodes]
+  );
 
   return <>{renderTreeNodes(nodes)}</>;
 };

@@ -4,18 +4,12 @@ import { nodes } from "./components/nodes";
 import "./App.css";
 
 function App() {
-  const [checked, setChecked] = useState<string[]>(["root"]);
-  const [expanded, setExpanded] = useState<string[]>([]);
+  const [checked, setChecked] = useState<string[]>([]);
+  const [_, setExpanded] = useState<string[]>([]);
 
   return (
     <div>
-      <TreeView
-        checked={checked}
-        expanded={expanded}
-        nodes={nodes}
-        onCheck={setChecked}
-        onExpand={setExpanded}
-      />
+      <TreeView nodes={nodes} onCheck={setChecked} onExpand={setExpanded} />
       <br />
       <h2>checked array</h2>
       <div>{JSON.stringify(checked)}</div>

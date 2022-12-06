@@ -2,6 +2,7 @@ export const nodes = [
   {
     value: "root",
     label: "root",
+    checked: true,
     children: [
       {
         value: "potato",
