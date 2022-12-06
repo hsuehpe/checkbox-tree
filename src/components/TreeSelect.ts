@@ -54,13 +54,14 @@ class TreeSelect {
     return Array.isArray(node.children);
   }
 
-  getCheckedLeafNodes() {
+  getCheckedLeafNodes(depth?: number) {
     const checkedLeafNodes: FlatNode[] = [];
 
     Object.keys(this.flatNodes).forEach((value) => {
       const node = this.flatNodes[value];
       if (node.checked && node.isLeaf) {
-        checkedLeafNodes.push(node);
+        if (depth === node.treeDepth || depth === undefined)
+          checkedLeafNodes.push(node);
       }
     });
 
