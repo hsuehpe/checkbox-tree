@@ -1,7 +1,6 @@
 import React, { FC, useCallback, useEffect, useRef, useState } from "react";
 import NodeModel, { NODE_STATUS } from "./NodeModal";
 import TreeNode from "./TreeNode";
-import { isEqual } from "lodash-es";
 import { Node } from "./typings";
 
 interface TreeViewProps {
@@ -36,11 +35,6 @@ const TreeView: FC<TreeViewProps> = ({
     getInitModel(nodes, checked, expanded)
   );
 
-  useEffect(() => {
-    onCheck(model.serializeList(NODE_STATUS.CHECKED));
-  }, []);
-
-  const nodesRef = useRef<Node[]>(nodes);
   const checkedRef = useRef<string[]>(checked);
   const expandedRef = useRef<string[]>(expanded);
 
@@ -71,19 +65,6 @@ const TreeView: FC<TreeViewProps> = ({
     return "unchecked";
   };
 
-  if (
-    !isEqual(checked, checkedRef.current) ||
-    !isEqual(expanded, expandedRef.current)
-  ) {
-    model.deserializeLists({
-      checked,
-      expanded,
-    });
-    console.log(model.getCheckedLeafNodes());
-    expandedRef.current = expanded;
-    checkedRef.current = checked;
-  }
-
   const handleCheck = useCallback(
     ({ value, checked }: { value: string; checked: boolean }) => {
       const clonedModel = model.clone();
@@ -113,6 +94,22 @@ const TreeView: FC<TreeViewProps> = ({
     },
     []
   );
+
+  useEffect(() => {
+    onCheck(model.serializeList(NODE_STATUS.CHECKED));
+  }, []);
+
+  if (
+    JSON.stringify(checked) !== JSON.stringify(checkedRef.current) ||
+    JSON.stringify(expanded) !== JSON.stringify(expandedRef.current)
+  ) {
+    model.deserializeLists({
+      checked,
+      expanded,
+    });
+    expandedRef.current = expanded;
+    checkedRef.current = checked;
+  }
 
   const renderTreeNodes = (nodes: Node[]) => {
     const treeNodes = nodes.map((node) => {

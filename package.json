@@ -11,7 +11,6 @@
     "@mantine/core": "^4.2.6",
     "@mantine/hooks": "^4.2.6",
     "@types/lodash-es": "^4.17.6",
-    "lodash-es": "^4.17.21",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-use": "^17.4.0",

@@ -5,7 +5,7 @@ import "./App.css";
 
 function App() {
   const [checked, setChecked] = useState<string[]>(["root"]);
-  const [expanded, setExpanded] = useState<string[]>(["mars"]);
+  const [expanded, setExpanded] = useState<string[]>([]);
 
   return (
     <div>
