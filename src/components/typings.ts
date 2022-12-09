@@ -22,4 +22,5 @@ export interface FlatNode {
   checked?: boolean;
   expanded?: boolean;
   checkState?: CheckState;
+  visible: boolean;
 }

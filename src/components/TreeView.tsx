@@ -7,6 +7,7 @@ interface TreeViewProps {
   nodes: Node[];
   onCheck: (list: string[]) => void;
   onExpand: (list: string[]) => void;
+  keyword?: string;
 }
 
 const getInitTreeSelect = (nodes: Node[]) => {
@@ -15,19 +16,24 @@ const getInitTreeSelect = (nodes: Node[]) => {
   return treeSelect;
 };
 
-const TreeView: FC<TreeViewProps> = ({ nodes, onCheck, onExpand }) => {
+const TreeView: FC<TreeViewProps> = ({ nodes, onCheck, keyword }) => {
   const [tree, setTree] = useState<TreeSelect>(() => getInitTreeSelect(nodes));
+  const initTree = useRef(tree);
 
   const isEveryChildChecked = (node: Node) => {
-    return node.children!.every(
-      (child) => tree.getNode(child.value).checkState === "checked"
-    );
+    return node.children
+      ? node.children.every(
+          (child) => tree.getNode(child.value).checkState === "checked"
+        )
+      : false;
   };
 
   const isSomeChildChecked = (node: Node) => {
-    return node.children!.some(
-      (child) => tree.getNode(child.value).checkState! !== "unchecked"
-    );
+    return node.children
+      ? node.children.some(
+          (child) => tree.getNode(child.value).checkState !== "unchecked"
+        )
+      : false;
   };
 
   const determineShallowCheckState = (node: Node): CheckState => {
@@ -64,15 +70,27 @@ const TreeView: FC<TreeViewProps> = ({ nodes, onCheck, onExpand }) => {
     [tree]
   );
 
+  useEffect(() => {
+    if (keyword) {
+      const clonedTree = tree.clone();
+      clonedTree.filterNodesByKeyword(keyword);
+      setTree(clonedTree);
+    } else {
+      setTree(initTree.current);
+    }
+  }, [keyword]);
+
   const renderTreeNodes = useCallback(
     (nodes: Node[]) => {
       const treeNodes = nodes.map((node) => {
         const flatNode = tree.getNode(node.value);
-        const { expanded, label, value, parent, isParent, treePath } = flatNode;
+        const { expanded, label, value, parent, isParent, treePath, visible } =
+          flatNode;
 
-        const children = flatNode.isParent
-          ? renderTreeNodes(flatNode.children!)
-          : null;
+        const children =
+          flatNode.children && flatNode.children.length > 0
+            ? renderTreeNodes(flatNode?.children)
+            : null;
 
         flatNode.checkState = determineShallowCheckState(node);
 
@@ -83,19 +101,21 @@ const TreeView: FC<TreeViewProps> = ({ nodes, onCheck, onExpand }) => {
         if (!parentExpanded) return null;
 
         return (
-          <ul key={treePath}>
-            <TreeNode
-              key={`${treePath}-${value}`}
-              value={value}
-              label={label}
-              checked={flatNode.checkState}
-              expanded={expanded ?? false}
-              onCheck={handleCheck}
-              onExpand={handleExpand}
-              isParent={isParent}
-            >
-              {children}
-            </TreeNode>
+          <ul style={{ marginLeft: "20px" }} key={treePath}>
+            {visible && (
+              <TreeNode
+                key={`${treePath}-${value}`}
+                value={value}
+                label={label}
+                checked={flatNode.checkState ?? "unchecked"}
+                expanded={expanded ?? false}
+                onCheck={handleCheck}
+                onExpand={handleExpand}
+                isParent={isParent}
+              >
+                {children}
+              </TreeNode>
+            )}
           </ul>
         );
       });

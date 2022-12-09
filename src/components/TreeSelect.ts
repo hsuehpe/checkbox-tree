@@ -3,25 +3,56 @@ import { Node, FlatNode } from "./typings";
 export enum NODE_STATUS {
   CHECKED = "checked",
   EXPANDED = "expanded",
+  VISIBLE = "visible",
 }
 
 class TreeSelect {
-  private flatNodes: Record<string, FlatNode>;
+  private flatNodesMap: Record<string, FlatNode>;
 
   constructor(initialFlatNodes = {}) {
-    this.flatNodes = initialFlatNodes;
+    this.flatNodesMap = initialFlatNodes;
   }
 
-  private cascadeDown(flatNode: FlatNode, isChecked: boolean) {
-    if (flatNode.isParent) {
-      flatNode.children!.forEach((child) => {
-        this.toggleCheck(child, isChecked);
+  private cascadeDown(flatNode: FlatNode, callback: (node: FlatNode) => void) {
+    callback(flatNode);
+    if (flatNode.children && flatNode.children.length > 0) {
+      flatNode.children.forEach((child) => {
+        this.cascadeDown(this.getNode(child.value), callback);
       });
     }
   }
 
+  private cascadeUp(flatNode: FlatNode, callback: (node: FlatNode) => void) {
+    callback(flatNode);
+    if (flatNode.isChild && flatNode.parent) {
+      const { parent } = this.getNode(flatNode.value);
+      this.cascadeUp(this.getNode(parent.value), callback);
+    }
+  }
+
+  filterNodesByKeyword(keyword: string) {
+    const filteredNodes: FlatNode[] = [];
+
+    Object.keys(this.flatNodesMap).forEach((value) => {
+      this.toggleNode(value, NODE_STATUS.VISIBLE, false);
+    });
+
+    Object.keys(this.flatNodesMap).forEach((value) => {
+      const node = this.flatNodesMap[value];
+      if (node.label.indexOf(keyword) !== -1) {
+        filteredNodes.push(node);
+      }
+    });
+
+    filteredNodes.forEach((node) => {
+      this.cascadeUp(node, (node) =>
+        this.toggleNode(node.value, NODE_STATUS.VISIBLE, true)
+      );
+    });
+  }
+
   getNode(value: string) {
-    return this.flatNodes[value];
+    return this.flatNodesMap[value];
   }
 
   flattenNodes(nodes?: Node[], parent = {} as FlatNode, depth = 0) {
@@ -30,7 +61,7 @@ class TreeSelect {
     nodes.forEach((node, index) => {
       const { value, label, children } = node;
       const isParent = this.nodeHasChildren(node);
-      const flatNode = (this.flatNodes[value] = {
+      const flatNode = (this.flatNodesMap[value] = {
         label,
         value,
         children,
@@ -45,6 +76,7 @@ class TreeSelect {
         index,
         checked: parent.checked ? parent.checked : node.checked ?? false,
         expanded: node.expanded ?? false,
+        visible: true,
       });
       this.flattenNodes(children, flatNode, depth + 1);
     });
@@ -57,8 +89,8 @@ class TreeSelect {
   getCheckedLeafNodes(depth?: number) {
     const checkedLeafNodes: FlatNode[] = [];
 
-    Object.keys(this.flatNodes).forEach((value) => {
-      const node = this.flatNodes[value];
+    Object.keys(this.flatNodesMap).forEach((value) => {
+      const node = this.getNode(value);
       if (node.checked && node.isLeaf) {
         if (depth === node.treeDepth || depth === undefined)
           checkedLeafNodes.push(node);
@@ -68,26 +100,21 @@ class TreeSelect {
     return checkedLeafNodes;
   }
 
-  toggleCheck(node: Node | FlatNode, isChecked: boolean) {
-    const flatNode = this.getNode(node.value);
-    this.toggleNode(node.value, NODE_STATUS.CHECKED, isChecked);
-
-    if (flatNode.isLeaf) {
-      return;
-    }
-
-    this.cascadeDown(flatNode, isChecked);
+  toggleCheck(node: FlatNode, isChecked: boolean) {
+    this.cascadeDown(node, (node) =>
+      this.toggleNode(node.value, NODE_STATUS.CHECKED, isChecked)
+    );
   }
 
   toggleNode(nodeValue: string, nodeStatus: NODE_STATUS, toggleValue: boolean) {
-    this.flatNodes[nodeValue][nodeStatus] = toggleValue;
+    this.flatNodesMap[nodeValue][nodeStatus] = toggleValue;
   }
 
   expandAllNodes(expand: boolean) {
-    const allKeys = Object.keys(this.flatNodes);
+    const allKeys = Object.keys(this.flatNodesMap);
     allKeys.forEach((key) => {
-      if (this.flatNodes[key].isParent) {
-        this.flatNodes[key].expanded = expand;
+      if (this.flatNodesMap[key].isParent) {
+        this.flatNodesMap[key].expanded = expand;
       }
     });
 
@@ -95,15 +122,17 @@ class TreeSelect {
   }
 
   isEveryChildChecked(node: Node) {
-    return node.children!.every((child) => this.getNode(child.value).checked);
+    return node && node.children
+      ? node.children.every((child) => this.getNode(child.value).checked)
+      : false;
   }
 
   clone() {
     const clonedFlatNodes: Record<string, FlatNode> = {};
 
     // Re-construct nodes one level deep to avoid shallow copy of mutable characteristics
-    Object.keys(this.flatNodes).forEach((value) => {
-      const node = this.flatNodes[value];
+    Object.keys(this.flatNodesMap).forEach((value) => {
+      const node = this.flatNodesMap[value];
       clonedFlatNodes[value] = { ...node };
     });
 
@@ -111,7 +140,7 @@ class TreeSelect {
   }
 
   reset() {
-    this.flatNodes = {};
+    this.flatNodesMap = {};
   }
 }
 
